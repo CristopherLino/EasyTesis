@@ -1,73 +1,87 @@
-# RStudio files
+# ==========================================
+# RStudio Configuration & Cache Files
+# ==========================================
 .Rproj.user/
 .Rproj.user/*
 *.Rproj
-
-# R history and workspace
 .RData
 .RHistory
 .Rhistory
-
-# R environment files
 .Renviron
 .Rprofile
 
-# shinyapps.io files
+# ==========================================
+# Development & Testing Files
+# ==========================================
+# Test scripts
+TEST_*.R
+*_test.R
+test_*.R
+INSTALAR_*.R
+run_*.R
+
+# Changelog and internal documentation
+CHANGELOG_*.md
+CAMBIOS_*.md
+CORRECCIONES_*.md
+RESUMEN_*.txt
+
+# ==========================================
+# Deployment Files (Keep manifest.json)
+# ==========================================
 rsconnect/
 .rsconnect/
 
-# IDE files
+# ==========================================
+# IDE & Editor Files
+# ==========================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.~*
 
-# OS files
+# ==========================================
+# OS & System Files
+# ==========================================
 .DS_Store
 Thumbs.db
 .thumbs
 .tmp
+.Thumbs.db
 
-# Temporary files
+# ==========================================
+# Temporary Files
+# ==========================================
 *.tmp
 *.bak
 *.backup
 *~
-.~*
 
-# Python/Jupyter
+# ==========================================
+# Python & Jupyter (if applicable)
+# ==========================================
 __pycache__/
 *.py[cod]
 *$py.class
 .ipynb_checkpoints
 
-# Data files (optional - uncomment if needed)
+# ==========================================
+# Data Files (Uncomment if needed)
+# ==========================================
 # data/
 # *.xlsx
 # *.xls
 # *.csv
 
-# Package files (optional - uncomment if needed)
+# ==========================================
+# Package & Environment Files
+# ==========================================
 # renv/
 # packrat/
 
-# Compiled documents
-*.pdf
-*.html
-# Keep htmlwidgets but ignore specific patterns if needed
-
-# Excel backup files
-~$*.xlsx
-~$*.xls
-
-# System files
-.Thumbs.db
-.DS_Store
-
-# Log files
+# ==========================================
+# Log Files
+# ==========================================
 *.log
-
-# Shiny app cache (optional)
-# rsconnect/
-# Keep rsconnect for deployment metadata

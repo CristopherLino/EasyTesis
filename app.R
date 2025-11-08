@@ -2403,14 +2403,14 @@ ui <- dashboardPage(
               div(
                 style = "background-color: #f5f5f5; padding: 15px; border-left: 4px solid #0f5bcc; border-radius: 4px; font-family: monospace; font-size: 0.95em;",
                 p(strong("APA 7ª edición:"), br(),
-                  "Lino-Cruz, C.J. (2025). EasyTesis: Aplicación Shiny para análisis estadísticos en psicología (v3.0). Recuperado de https://github.com/CristopherLinoCruz/Easy-Tesis"),
+                  "Lino-Cruz, C.J. (2025). EasyTesis: Aplicación para análisis correlacionales en psicología (v1.0). Recuperado de https://cristopherlino17-easytesis.share.connect.posit.cloud/"),
                 br(),
                 p(strong("BibTeX:"), br(),
                   "@software{linocruz2025easytesis,", br(),
-                  "  title={EasyTesis: Aplicación Shiny para análisis estadísticos},", br(),
+                  "  title={EasyTesis: Aplicación para análisis correlacionales en psicología (v1.0)},", br(),
                   "  author={Lino-Cruz, C.J.},", br(),
                   "  year={2025},", br(),
-                  "  url={https://github.com/CristopherLinoCruz/Easy-Tesis}", br(),
+                  "  url={https://cristopherlino17-easytesis.share.connect.posit.cloud/}", br(),
                   "}")
               )
             )

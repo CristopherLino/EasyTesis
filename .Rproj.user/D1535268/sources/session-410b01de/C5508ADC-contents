@@ -1,0 +1,141 @@
+
+rm(list=ls())
+library(dplyr)
+library(readxl)
+library(ThesiStats)
+library(readr)
+library(openxlsx)
+library(stringr)
+
+
+df <- read_excel("Data_forms.xlsx")
+
+labels(df)
+
+
+df_new <- rename_columns(df = df,
+                         new_names = c("Marca", "Acepto", "Género", "Edad", 
+                                       "Estado_civil", "Num_hijos", "Cuidado_hijo", "Ayuda", 
+                                       "Quién", "Edad2", "Género2", "Nivel_TEA", "Terapia"),
+                         columns = 1:13)
+
+
+
+df_new_2 <- df_new %>% 
+  filter(Acepto == "Sí") %>%  # Mantiene solo quienes aceptaron participar
+  mutate(
+    Edad = parse_number(Edad),  # Extrae solo el número en la columna Edad
+    Estado_civil = case_when(
+      str_detect(Estado_civil, regex("casad", ignore_case = TRUE)) ~ "Casado(a)",
+      str_detect(Estado_civil, regex("separad", ignore_case = TRUE)) ~ "Separado(a)",
+      str_detect(Estado_civil, regex("solter", ignore_case = TRUE)) ~ "Soltero(a)",
+      str_detect(Estado_civil, regex("divorciad", ignore_case = TRUE)) ~ "Divorciado(a)",
+      TRUE ~ str_to_title(Estado_civil)),
+    Quién = if_else(
+      Quién == "Por lo general solo doy yo quien atiende a mi hijo, mi esposo solo los fines de semana me apoya",
+      "Es mi pareja",
+      Quién),
+    Num_hijos = parse_number(Num_hijos),
+    Edad2 = parse_number(Edad2)
+  ) %>%
+  select(-Marca, -Acepto)  # Elimina columnas innecesarias
+
+
+
+df_renombrado <-rename_items2(df = df_new_2, 
+                              prefix1 = "PSI", 
+                              prefix2 = "ASP",
+                              inicio = "1. A menudo tengo la sensación que no puedo controlar muy  bien las situaciones.", 
+                              final = "12.  Puedo conversar de mis problemas con mis amigos.",
+                              n_items1 = 36, 
+                              n_items2 = 12) 
+
+
+
+Alternativa_1 <- c("Muy en desacuerdo" = 1,
+                   "Muy desacuerdo" = 1,
+                   "En desacuerdo" = 2,
+                   "En desacuerdo." = 2,
+                   "No seguro" = 3,
+                   "Non seguro" = 3,
+                   "De acuerdo" = 4,
+                   "Muy de acuerdo" = 5)
+
+Alternativa_2 <-  c("Nunca" = 1,
+                    "Casi nunca" = 2,
+                    "Casi Nunca" = 2,
+                    "A veces" = 3,
+                    "Casi siempre" = 4,
+                    "Siempre" = 5)
+
+
+df_renombrado <- df_renombrado %>%
+  mutate(across(
+    setdiff(paste0("PSI", 1:36), 
+            c("PSI22", "PSI32", "PSI33")),~ unname(Alternativa_1[.]))) %>%
+  mutate(across(ASP1:ASP12, ~ unname(Alternativa_2[.])))
+
+
+# ÍTEM 22: 'Siento que soy:' (Invertido, 5=Más Estrés)
+
+unique(df_renombrado$PSI22)  # ver respuestas
+
+Alternativa_Item22 <- c(
+  "No muy bueno/a como padre/ madre." = 5,
+  "Una persona que tiene problemas para ser padre/madre." = 4,
+  "Un/a  padre/madre normal." = 3,
+  "Un/a padre/madre mejor que el promedio." = 2,
+  "Muy buen/a padre/ madre." = 1
+)
+
+# ÍTEM 32: 'He observado que lograr que mi hijo(a) me obedezca es:' (Invertido, 5=Más Estrés)
+
+unique(df_renombrado$PSI32)
+
+Alternativa_Item32 <- c(
+  "Mucho más difícil de lo que me imaginaba." = 5,
+  "Algo mas difícil de lo que esperaba." = 4,
+  "Algo más difícil de lo que esperaba." = 4, # Incluido por si hay variaciones de puntuación
+  "Como esperaba." = 3,
+  "Algo menos difícil de lo que esperaba" = 2,
+  "Mucho más fácil de lo que esperaba." = 1
+)
+
+unique(df_renombrado$PSI33)
+
+Alternativa_Item33 <- c(
+  "+ 10" = 5,
+  "8- 9" = 4,
+  "6- 7" = 3,
+  "4- 5" = 2,
+  "1- 3" = 1
+)
+
+
+df_final <- df_renombrado %>%
+  mutate(
+    PSI22 = unname(Alternativa_Item22[PSI22]),
+    PSI32 = unname(Alternativa_Item32[PSI32]),
+    PSI33 = unname(Alternativa_Item33[PSI33])
+  )
+
+### Hacer sumatoria
+texto <- readLines("Dimensiones.txt", encoding = "UTF-8")
+code <- ThesiStats::generate_code(texto, "df")
+cat(code)
+
+df_final <- df_final %>% 
+  rowwise() %>% 
+  mutate(Estres_parental = sum(c_across(c(PSI1,PSI2,PSI3,PSI4,PSI5,PSI6,PSI7,PSI8,PSI9,PSI10,PSI11,PSI12,PSI13,PSI14,PSI15,PSI16,PSI17,PSI18,PSI19,PSI20,PSI21,PSI22,PSI23,PSI24,PSI25,PSI26,PSI27,PSI28,PSI29,PSI30,PSI31,PSI32,PSI33,PSI34,PSI35,PSI36))),
+         Malestar_paterno = sum(c_across(c(PSI1,PSI2,PSI3,PSI4,PSI5,PSI6,PSI7,PSI8,PSI9,PSI10,PSI11,PSI12))),
+         Disfuncional = sum(c_across(c(PSI13,PSI14,PSI15,PSI16,PSI17,PSI18,PSI19,PSI20,PSI21,PSI22,PSI23,PSI24))),
+         Niño_dificil = sum(c_across(c(PSI25,PSI26,PSI27,PSI28,PSI29,PSI30,PSI31,PSI32,PSI33,PSI34,PSI35,PSI36))),
+         Apoyo_social = sum(c_across(c(ASP3,ASP4,ASP8,ASP11,ASP6,ASP7,ASP9,ASP12,ASP1,ASP2,ASP5,ASP10))),
+         Familia = sum(c_across(c(ASP3,ASP4,ASP8,ASP11))),
+         Amigos = sum(c_across(c(ASP6,ASP7,ASP9,ASP12))),
+         Significativo = sum(c_across(c(ASP1,ASP2,ASP5,ASP10)))) %>% 
+  ungroup()
+
+
+openxlsx::write.xlsx(df_final, "df_final.xlsx")
+

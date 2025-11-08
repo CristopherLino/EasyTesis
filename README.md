@@ -6,187 +6,81 @@
 
 ## 📋 Descripción
 
-**EasyTesis** es una aplicación Shiny interactiva diseñada para facilitar el análisis estadístico de datos en investigaciones de psicología y ciencias del comportamiento. Proporciona herramientas profesionales para análisis descriptivos, pruebas de normalidad, correlaciones y comparaciones de grupos, con formato APA 7ª edición.
+**EasyTesis** es una aplicación interactiva para análisis estadístico de datos en investigaciones de psicología. Proporciona herramientas profesionales con salidas en formato APA 7ª edición.
 
-### Características principales:
+## ✨ Características principales
 
-✅ **Análisis Descriptivos** - Estadísticas descriptivas completas (media, desviación estándar, rango, etc.)
+- 📊 **Análisis Descriptivos** - Media, desviación estándar, rango, etc.
+- 🔍 **Pruebas de Normalidad** - Shapiro-Wilk y Mardia multivariada
+- 📈 **Correlaciones** - Pearson y Spearman con visualización
+- 🔄 **Comparación de Grupos** - T-test, Mann-Whitney U, ANOVA de Welch, Kruskal-Wallis
+- ⚙️ **Pruebas Post-hoc** - Games-Howell y Dunn's Test
+- 🎯 **Confiabilidad** - Alfa de Cronbach y Omega de McDonald
+- 📦 **Visualización** - Boxplots interactivos
+- 💾 **Exportación** - Tablas Excel y gráficos JPG 2400x2400px @ 300dpi
 
-✅ **Pruebas de Normalidad** - Shapiro-Wilk univariada y Mardia multivariada
+## 🚀 Instalación
 
-✅ **Análisis de Correlaciones** - Pearson y Spearman con matriz visual
-
-✅ **Comparación de Grupos** - T-test, Mann-Whitney U, ANOVA de Welch, Kruskal-Wallis
-
-✅ **Pruebas Post-hoc** - Games-Howell (ANOVA) y Dunn's Test (Kruskal-Wallis)
-
-✅ **Análisis de Confiabilidad** - Alfa de Cronbach y Omega de McDonald
-
-✅ **Visualización de Datos** - Boxplots interactivos para comparación de distribuciones
-
-✅ **Exportación Profesional** - Tablas en formato Excel con estilo APA
-
-✅ **Descargas de Alta Resolución** - Gráficos en JPG 2400x2400px @ 300dpi
-
-## 🚀 Comenzar
-
-### Requisitos previos
-
+### Requisitos
 - **R 4.0** o superior
 - **RStudio** (recomendado)
 
-### Instalación local
+### Pasos
 
-1. **Clonar el repositorio:**
+1. **Clona el repositorio:**
    ```bash
    git clone https://github.com/CristopherLino/EasyTesis.git
    cd EasyTesis
    ```
 
-2. **Instalar dependencias:**
+2. **Instala las dependencias:**
    ```r
-   # En RStudio o R Console
    source("install_dependencies.R")
    ```
 
-   O instalar manualmente:
-   ```r
-   packages <- c("shiny", "shinydashboard", "shinyjs", "DT", "readxl",
-                 "openxlsx", "dplyr", "tidyr", "ggplot2", "psych", "rstatix",
-                 "writexl", "corrplot", "semTools", "MVN")
-
-   install.packages(packages)
-   ```
-
-3. **Ejecutar la aplicación:**
+3. **Ejecuta la aplicación:**
    ```r
    shiny::runApp()
    ```
 
-   O en RStudio: Click en **"Run App"** (esquina superior derecha del editor)
-
 ## 📊 Uso
 
-### Flujo básico:
+1. Carga un archivo Excel con tus datos
+2. Selecciona las variables para análisis
+3. (Opcional) Selecciona una variable groupadora para comparaciones
+4. Ejecuta los análisis deseados
+5. Descarga los resultados en Excel o imágenes JPG
 
-1. **Cargar datos** - Importa un archivo Excel (.xlsx, .xls)
-2. **Seleccionar variables** - Elige variables continuas para análisis
-3. **Seleccionar variable groupadora** - Para comparaciones de grupos (opcional)
-4. **Ejecutar análisis** - Selecciona el tipo de análisis que deseas
-5. **Revisar resultados** - Visualiza tablas y gráficos
-6. **Descargar** - Exporta resultados en Excel o imágenes JPG
+### Formato de datos esperado
 
-### Tablas de Datos Esperadas:
-
-La aplicación espera archivos Excel con:
-- **Primera fila**: Nombres de variables
-- **Datos**: Valores numéricos para variables continuas
-- **Categoría**: Puede incluir variables categóricas para agrupación
+Archivo Excel con:
+- Primera fila: Nombres de variables
+- Filas siguientes: Datos
 
 **Ejemplo:**
+```
 | Edad | Depresión | Ansiedad | Género |
 |------|-----------|----------|--------|
 | 22   | 15        | 12       | M      |
 | 28   | 8         | 9        | F      |
-| 25   | 18        | 15       | M      |
-
-## 🔧 Configuración
-
-### Variables sociodemográficas vs. Ítems
-
-La aplicación detecta automáticamente:
-- **Variables continuas sociodemográficas** - Edad, ingresos, etc.
-- **Ítems de escala** - Variables con patrones A1, P2, Q5, etc.
-
-### Métodos estadísticos
-
-- **Normales**: ANOVA de Welch (robusto ante varianzas desiguales)
-- **No normales**: Kruskal-Wallis H
-- **Post-hoc ANOVA**: Games-Howell (robusto)
-- **Post-hoc Kruskal-Wallis**: Dunn's Test
-
-## 📦 Publicar en Posit Connect Cloud
-
-### Opción 1: Publicar desde RStudio (Recomendado)
-
-1. Instala Posit Connect Agent:
-   ```r
-   install.packages("rsconnect")
-   ```
-
-2. Configura tu cuenta:
-   ```r
-   rsconnect::setAccountInfo(
-     account = "tu_cuenta",
-     token = "tu_token",
-     secret = "tu_secret"
-   )
-   ```
-
-3. Publica desde RStudio:
-   ```
-   Click en "Publish" → "Publish to Posit Connect"
-   ```
-
-### Opción 2: Publicar desde línea de comandos
-
-```r
-rsconnect::deployApp(
-  appDir = getwd(),
-  appName = "EasyTesis",
-  account = "tu_cuenta",
-  server = "posit.cloud"
-)
 ```
 
-### Opción 3: Usar GitHub
+## 🎯 Métodos estadísticos utilizados
 
-1. Conecta Posit Connect a tu repositorio GitHub
-2. Selecciona la rama `main`
-3. Configura el despliegue automático
+- **Normalidad**: Shapiro-Wilk (univariada) y Mardia (multivariada)
+- **Comparaciones paramétricas**: ANOVA de Welch (robusto ante varianzas desiguales)
+- **Comparaciones no paramétricas**: Kruskal-Wallis H
+- **Post-hoc paramétricas**: Games-Howell
+- **Post-hoc no paramétricas**: Dunn's Test
+- **Confiabilidad**: Alfa de Cronbach y Omega de McDonald
 
-## 📁 Estructura del Proyecto
+## 📝 Formato de salida
 
-```
-EasyTesis/
-├── app.R                          # Aplicación principal
-├── install_dependencies.R         # Script para instalar paquetes
-├── README.md                      # Este archivo
-├── .gitignore                     # Archivos a ignorar en git
-├── rsconnect/                     # Configuración de despliegue
-│   └── deployment.json            # Metadata de Posit Connect
-├── CHANGELOG_COMPARACIONES_v2.1.md # Historial de cambios
-└── Referencias EasyTesis.bib      # Referencias bibliográficas
-```
-
-## 🔒 Requisitos de Privacidad y Seguridad
-
-- Los datos se procesan completamente en la sesión local
-- No se almacenan datos en el servidor de Posit Connect
-- Se requiere autenticación para acceder a la aplicación publicada
-- Asegúrate de configurar permisos apropiados en Posit Connect
-
-## 🐛 Solución de Problemas
-
-### Error: "Paquete no encontrado"
-```r
-install.packages("nombre_paquete")
-```
-
-### Error: "Mardia test - valor ausente donde TRUE/FALSE es necesario"
-- Asegúrate de tener MVN actualizado: `install.packages("MVN")`
-- Verifica que tengas al menos 3 variables continuas
-
-### La app se ejecuta lentamente
-- Reduce el tamaño de la base de datos (máximo recomendado: 10,000 filas)
-- Cierra otras aplicaciones que consuman recursos
-
-## 📚 Referencias
-
-- [Documentación Shiny](https://shiny.rstudio.com/)
-- [Publicar en Posit Connect](https://docs.posit.co/connect/user/publishing/)
-- [APA Style 7ª edición](https://apastyle.apa.org/)
-- [Análisis estadístico en R](https://statsandr.com/)
+Todas las tablas se exportan en formato **APA 7ª edición**:
+- Símbolos estadísticos (t, F, H, U, etc.)
+- Grados de libertad entre paréntesis
+- Efectos de tamaño como símbolos (d, ω², η², r_rb)
+- Valores p con 4 decimales
 
 ## 👤 Autor
 
@@ -196,15 +90,14 @@ install.packages("nombre_paquete")
 
 ## 📄 Licencia
 
-Este proyecto está bajo la licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
+Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
 
-## 🙏 Agradecimientos
+## 📚 Referencias
 
-- Comunidad R y Shiny
+- Documentación de [Shiny](https://shiny.rstudio.com/)
 - Paquetes: psych, rstatix, semTools, MVN
-- Ayuda en análisis estadístico: [R for Data Science](https://r4ds.had.co.nz/)
+- Estilo APA: [Publication Manual of the APA](https://apastyle.apa.org/)
 
 ---
 
-**Última actualización**: 2025-11-08
-**Versión**: 2.1
+**¿Necesitas ayuda?** Revisa [DEPLOYMENT.md](DEPLOYMENT.md) para publicar en Posit Connect Cloud.

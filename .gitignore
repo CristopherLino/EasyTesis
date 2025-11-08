@@ -1,0 +1,73 @@
+# RStudio files
+.Rproj.user/
+.Rproj.user/*
+*.Rproj
+
+# R history and workspace
+.RData
+.RHistory
+.Rhistory
+
+# R environment files
+.Renviron
+.Rprofile
+
+# shinyapps.io files
+rsconnect/
+.rsconnect/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+.thumbs
+.tmp
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*~
+.~*
+
+# Python/Jupyter
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints
+
+# Data files (optional - uncomment if needed)
+# data/
+# *.xlsx
+# *.xls
+# *.csv
+
+# Package files (optional - uncomment if needed)
+# renv/
+# packrat/
+
+# Compiled documents
+*.pdf
+*.html
+# Keep htmlwidgets but ignore specific patterns if needed
+
+# Excel backup files
+~$*.xlsx
+~$*.xls
+
+# System files
+.Thumbs.db
+.DS_Store
+
+# Log files
+*.log
+
+# Shiny app cache (optional)
+# rsconnect/
+# Keep rsconnect for deployment metadata

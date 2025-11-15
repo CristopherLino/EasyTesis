@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "platform": "4.3.0",
+  "metadata": {
+    "appmode": "shiny",
+    "entrypoint": "app.R"
+  },
+  "files": {
+    "app.R": {
+      "checksum": ""
+    },
+    "install_dependencies.R": {
+      "checksum": ""
+    },
+    "README.md": {
+      "checksum": ""
+    }
+  },
+  "description": "EasyTesis - Análisis Estadístico para Psicología | Interactive Shiny application for statistical analysis in psychology research"
+}

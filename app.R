@@ -1,5 +1,5 @@
 
-
+rm(list=ls())
 # ================================================================================
 # EASYTESIS - Aplicación Shiny para Análisis Estadísticos en Psicología
 # Análisis completo de datos: Descriptivos, Normalidad, Correlaciones, Comparaciones
@@ -22,6 +22,10 @@ library(writexl)
 library(corrplot)
 library(semTools)
 library(MVN)
+library(httr2)
+
+# Cargar funciones de reportes
+source("Informe.R")
 
 # ============================================================================
 # FUNCIONES AUXILIARES
@@ -425,35 +429,29 @@ calcular_confiabilidad_escala <- function(data, items) {
   alpha_cronbach <- alpha_result$total$raw_alpha
 
   # CALCULAR OMEGA (semTools - compatible con Jamovi)
-  # semTools::reliability() calcula Omega igual que Jamovi
   omega_mcdonald <- NA
   tryCatch({
     # Usar semTools::reliability para calcular omega
-    # Este método es idéntico al usado por Jamovi
     reliability_result <- suppressWarnings(
       semTools::reliability(df_items, return.total = TRUE)
     )
 
     # Extraer omega
     if (!is.null(reliability_result)) {
-      # semTools retorna omega como parte de la lista
       if ("omega" %in% names(reliability_result)) {
         omega_mcdonald <- as.numeric(reliability_result["omega"])
       } else if (length(reliability_result) > 0) {
-        # Alternativa: tomar el primer valor numérico (omega)
         omega_mcdonald <- as.numeric(reliability_result[1])
       }
     }
   }, error = function(e) {
     # Si semTools falla, intentar con método alternativo
     tryCatch({
-      # Usar correlación de Pearson entre ítems como backup
       cor_matrix <- cor(df_items, use = "complete.obs")
       n_items <- ncol(df_items)
       mean_cor <- mean(cor_matrix[lower.tri(cor_matrix)])
       omega_mcdonald <<- (n_items * mean_cor) / (1 + (n_items - 1) * mean_cor)
     }, error = function(e2) {
-      # Si todo falla, dejar como NA
       NULL
     })
   })
@@ -463,29 +461,13 @@ calcular_confiabilidad_escala <- function(data, items) {
   media_escala <- mean(suma_escala)
   de_escala <- sd(suma_escala)
 
-  # Determinar interpretación (basada en Alpha)
-  if (alpha_cronbach >= 0.90) {
-    interpretacion <- "Alto"
-  } else if (alpha_cronbach >= 0.80) {
-    interpretacion <- "Bueno"
-  } else if (alpha_cronbach >= 0.70) {
-    interpretacion <- "Aceptable"
-  } else if (alpha_cronbach >= 0.60) {
-    interpretacion <- "Cuestionable"
-  } else if (alpha_cronbach >= 0.50) {
-    interpretacion <- "Pobre"
-  } else {
-    interpretacion <- "Inaceptable"
-  }
-
-  # Crear dataframe de resultados
+  # Crear dataframe de resultados (mantener todas las columnas para compatibilidad interna)
   resultado_df <- data.frame(
     Escala = paste0("Escala (", length(items_validos), " ítems)"),
     Alpha_Cronbach = round(alpha_cronbach, 4),
     Omega_McDonald = ifelse(is.na(omega_mcdonald), NA, round(as.numeric(omega_mcdonald), 4)),
     M_Escala = round(media_escala, 2),
     DE_Escala = round(de_escala, 2),
-    Interpretacion = interpretacion,
     Items_utilizados = paste(items_validos, collapse = ", "),
     n_casos = nrow(df_items),
     stringsAsFactors = FALSE
@@ -507,22 +489,11 @@ test_normalidad <- function(data, variables) {
       if (length(x) >= 3 && length(x) <= 5000) {
         sw_test <- shapiro.test(x)
 
-        # Interpretación mejorada
-        if (sw_test$p.value > 0.05) {
-          interpretacion <- "Sí (p > 0.05)"
-          recomendacion <- "Usar pruebas paramétricas"
-        } else {
-          interpretacion <- "No (p ≤ 0.05)"
-          recomendacion <- "Usar pruebas no paramétricas"
-        }
-
         data.frame(
           Variable = var,
           n = length(x),
           Estadistico_SW = round(sw_test$statistic, 4),
           p_valor = round(sw_test$p.value, 4),
-          Normalidad = interpretacion,
-          Recomendacion = recomendacion,
           stringsAsFactors = FALSE
         )
       } else {
@@ -531,8 +502,6 @@ test_normalidad <- function(data, variables) {
           n = length(x),
           Estadistico_SW = NA,
           p_valor = NA,
-          Normalidad = ifelse(length(x) < 3, "n muy pequeño", "n muy grande (>5000)"),
-          Recomendacion = "Revisar datos",
           stringsAsFactors = FALSE
         )
       }
@@ -615,6 +584,93 @@ calcular_correlaciones <- function(data, variables, metodo = "spearman") {
     # Matriz de correlaciones
     cor_matrix <- cor_test$r
     p_matrix <- cor_test$p
+
+    # Formato APA con asteriscos
+    cor_apa <- matrix(NA, nrow = nrow(cor_matrix), ncol = ncol(cor_matrix))
+    rownames(cor_apa) <- rownames(cor_matrix)
+    colnames(cor_apa) <- colnames(cor_matrix)
+
+    for (i in 1:nrow(cor_matrix)) {
+      for (j in 1:ncol(cor_matrix)) {
+        if (i == j) {
+          cor_apa[i, j] <- "1.00"
+        } else if (i > j) {
+          r_val <- round(cor_matrix[i, j], 2)
+          p_val <- p_matrix[i, j]
+
+          stars <- ""
+          if (is.na(p_val)) {
+            cor_apa[i, j] <- paste0(r_val, " (NC)")
+          } else {
+            if (p_val < 0.001) stars <- "***"
+            else if (p_val < 0.01) stars <- "**"
+            else if (p_val < 0.05) stars <- "*"
+
+            cor_apa[i, j] <- paste0(r_val, stars)
+          }
+        } else {
+          cor_apa[i, j] <- ""
+        }
+      }
+    }
+
+    return(as.data.frame(cor_apa))
+  }, error = function(e) {
+    return(NULL)
+  })
+}
+
+# ============================================================================
+# FUNCIÓN PARA CALCULAR CORRELACIONES ROBUSTAS - PERCENTAGE BEND (WRS2)
+# ============================================================================
+calcular_correlaciones_robusta <- function(data, variables) {
+  tryCatch({
+    # Verificar que WRS2 está disponible
+    if (!requireNamespace("WRS2", quietly = TRUE)) {
+      return(NULL)
+    }
+
+    df_sel <- data %>% select(all_of(variables))
+    df_sel <- df_sel[complete.cases(df_sel), ]
+
+    if (nrow(df_sel) < 3 || ncol(df_sel) < 2) {
+      return(NULL)
+    }
+
+    # Verificar varianza en variables (evitar constantes)
+    vars_validas <- sapply(df_sel, function(x) sd(x, na.rm = TRUE) > 0)
+    if (!all(vars_validas)) {
+      return(NULL)
+    }
+
+    # Calcular matriz de correlaciones robustas
+    cor_matrix <- matrix(NA, nrow = ncol(df_sel), ncol = ncol(df_sel))
+    p_matrix <- matrix(NA, nrow = ncol(df_sel), ncol = ncol(df_sel))
+    rownames(cor_matrix) <- colnames(df_sel)
+    colnames(cor_matrix) <- colnames(df_sel)
+    rownames(p_matrix) <- colnames(df_sel)
+    colnames(p_matrix) <- colnames(df_sel)
+
+    # Calcular pbcor para cada par de variables
+    for (i in 1:ncol(df_sel)) {
+      for (j in i:ncol(df_sel)) {
+        if (i == j) {
+          cor_matrix[i, j] <- 1.0
+          p_matrix[i, j] <- 0
+        } else {
+          tryCatch({
+            pb_result <- WRS2::pbcor(df_sel[[i]], df_sel[[j]])
+            cor_matrix[i, j] <- pb_result$cor
+            cor_matrix[j, i] <- pb_result$cor
+            p_matrix[i, j] <- pb_result$p.value
+            p_matrix[j, i] <- pb_result$p.value
+          }, error = function(e) {
+            # Si pbcor falla, dejar como NA
+            NULL
+          })
+        }
+      }
+    }
 
     # Formato APA con asteriscos
     cor_apa <- matrix(NA, nrow = nrow(cor_matrix), ncol = ncol(cor_matrix))
@@ -1855,6 +1911,12 @@ ui <- dashboardPage(
                 tags$li(strong("Correlaciones:"), " Analiza relaciones entre variables"),
                 tags$li(strong("Comparaciones:"), " Compara grupos con pruebas paramétricas y no paramétricas"),
                 tags$li(strong("Descargas:"), " Exporta todos tus resultados en Excel")
+              ),
+              hr(),
+              p(
+                style = "font-size: 0.9em; color: #666; font-style: italic;",
+                icon("info-circle"),
+                " EasyTesis © 2025 Cristopher Lino-Cruz. Herramienta de uso libre para investigación."
               )
             )
           )
@@ -2172,7 +2234,9 @@ ui <- dashboardPage(
               column(
                 4,
                 selectInput("metodo_correlacion", "Método:",
-                            choices = c("Spearman" = "spearman", "Pearson" = "pearson"),
+                            choices = c("Pearson" = "pearson",
+                                       "Spearman" = "spearman",
+                                       "Robust (PB)" = "robust"),
                             selected = "spearman")
               )
             ),
@@ -2383,9 +2447,20 @@ ui <- dashboardPage(
               downloadButton("descargar_comparacion", "Descargar", class = "btn-light btn-custom")
             )
           )
+        ),
+        fluidRow(
+          column(
+            4,
+            div(
+              class = "download-card",
+              icon("database", class = "fa-3x"),
+              h3("7. Datos + Sumatorias"),
+              downloadButton("descargar_datos_sumatorias", "Descargar", class = "btn-light btn-custom")
+            )
+          )
         )
       ),
-      
+
       # Tab: Acerca de
       tabItem(
         tabName = "acerca",
@@ -2653,7 +2728,7 @@ server <- function(input, output, session) {
     vars_numericas = NULL,
     vars_categoricas = NULL
   )
-  
+
   # ========== CARGAR DATOS ==========
   observeEvent(input$archivo_datos, {
     req(input$archivo_datos)
@@ -2908,6 +2983,21 @@ server <- function(input, output, session) {
     }
   )
 
+  # Descargar datos con sumatorias aplicadas
+  output$descargar_datos_sumatorias <- downloadHandler(
+    filename = function() {
+      paste0("Datos_con_Sumatorias_", Sys.Date(), ".xlsx")
+    },
+    content = function(file) {
+      if (is.null(datos_reactive())) {
+        showNotification("No hay datos cargados. Carga primero un archivo.",
+                        type = "error", duration = 5)
+        return(NULL)
+      }
+      write_xlsx(datos_reactive(), file)
+    }
+  )
+
   # ========== SUMATORIA ==========
   # Procesar múltiples sumatorias desde texto masivo
   observeEvent(input$btn_procesar_sumatorias, {
@@ -3087,13 +3177,6 @@ server <- function(input, output, session) {
       ),
       rownames = FALSE
     ) %>%
-      DT::formatStyle(
-        'Normalidad',
-        backgroundColor = DT::styleEqual(
-          c('Sí (p > 0.05)', 'No (p ≤ 0.05)'),
-          c('#d4edda', '#f8d7da')
-        )
-      ) %>%
       DT::formatStyle(
         'p_valor',
         backgroundColor = DT::styleInterval(0.05, c('#f8d7da', '#d4edda'))
@@ -3360,7 +3443,6 @@ server <- function(input, output, session) {
       Variable = tabla$Variable,
       Alpha = tabla$Alpha_Cronbach,
       Omega = tabla$Omega_McDonald,
-      Interpretacion = tabla$Interpretacion,
       stringsAsFactors = FALSE
     )
 
@@ -3371,30 +3453,14 @@ server <- function(input, output, session) {
         scrollX = TRUE,
         autoWidth = TRUE,
         columnDefs = list(
-          list(className = 'dt-center', targets = 1:3),
+          list(className = 'dt-center', targets = 1:2),
           list(className = 'dt-left', targets = 0)
         ),
         dom = 'Bfrtip'
       ),
       rownames = FALSE,
-      caption = "Confiabilidad - Alpha de Cronbach y Omega (Compatible con Jamovi)"
-    ) %>%
-      DT::formatStyle(
-        'Interpretacion',
-        backgroundColor = DT::styleEqual(
-          c('Alto', 'Bueno', 'Aceptable', 'Cuestionable', 'Pobre', 'Inaceptable'),
-          c('#d4edda', '#cfe2ff', '#fff3cd', '#ffe6e6', '#f8d7da', '#f8d7da')
-        ),
-        fontWeight = 'bold'
-      ) %>%
-      DT::formatStyle(
-        'Alpha',
-        backgroundColor = DT::styleInterval(
-          c(0.50, 0.60, 0.70, 0.80, 0.90),
-          c('#f8d7da', '#f5c6cb', '#fff3cd', '#cfe2ff', '#d4edda', '#c3e6cb')
-        ),
-        fontWeight = 'bold'
-      )
+      caption = "Confiabilidad - Alpha y Omega (Compatible con Jamovi)"
+    )
   })
 
   # Descarga para tab Confiabilidad - SOLO 4 columnas
@@ -3408,12 +3474,11 @@ server <- function(input, output, session) {
       }
       tabla <- resultados$confiabilidad
 
-      # Crear tabla simplificada con SOLO 4 columnas
+      # Crear tabla simplificada con SOLO 3 columnas
       tabla_descarga <- data.frame(
-        Variable = tabla$Variable,
+        Escala = tabla$Escala,
         Alpha = tabla$Alpha_Cronbach,
         Omega = tabla$Omega_McDonald,
-        Interpretacion = tabla$Interpretacion,
         stringsAsFactors = FALSE
       )
 
@@ -3510,17 +3575,30 @@ server <- function(input, output, session) {
     }
     
     withProgress(message = "Calculando correlaciones...", {
-      resultados$correlaciones <- calcular_correlaciones(
-        datos_reactive(),
-        input$vars_correlaciones_sel,
-        input$metodo_correlacion
-      )
+      if (input$metodo_correlacion == "robust") {
+        # Usar correlaciones robustas con Percentage Bend (WRS2)
+        resultados$correlaciones <- calcular_correlaciones_robusta(
+          datos_reactive(),
+          input$vars_correlaciones_sel
+        )
+      } else {
+        # Usar correlaciones tradicionales (Pearson o Spearman)
+        resultados$correlaciones <- calcular_correlaciones(
+          datos_reactive(),
+          input$vars_correlaciones_sel,
+          input$metodo_correlacion
+        )
+      }
     })
-    
+
     if (!is.null(resultados$correlaciones)) {
       showNotification("Correlaciones calculadas", type = "message")
     } else {
-      showNotification("Error: No hay suficientes datos limpios para correlacionar las variables seleccionadas (n<3).", type = "error")
+      if (input$metodo_correlacion == "robust") {
+        showNotification("Error: No se pudieron calcular correlaciones robustas. Verifica que tengas datos válidos y que el paquete WRS2 esté instalado.", type = "error")
+      } else {
+        showNotification("Error: No hay suficientes datos limpios para correlacionar las variables seleccionadas (n<3).", type = "error")
+      }
     }
   })
   
@@ -3544,7 +3622,7 @@ server <- function(input, output, session) {
         )
       ),
       escape = FALSE, # Para que los asteriscos se muestren correctamente
-      caption = "Matriz de Correlaciones (Spearman o Pearson). *** p<.001, ** p<.01, * p<.05, NC = No Calculable"
+      caption = "Matriz de Correlaciones (Pearson, Spearman o Robust - PB). *** p<.001, ** p<.01, * p<.05, NC = No Calculable"
     ) %>%
       DT::formatStyle(
         columns = 1:ncol(tabla),

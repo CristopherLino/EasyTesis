@@ -22,10 +22,6 @@ library(writexl)
 library(corrplot)
 library(semTools)
 library(MVN)
-library(httr2)
-
-# Cargar funciones de reportes
-source("Informe.R")
 
 # ============================================================================
 # FUNCIONES AUXILIARES
